@@ -89,3 +89,8 @@ After starting a stream:
 To use the mic in Discord, OBS, or a game on the host:
 - Point that application's microphone input at **"Microphone (Steam Streaming Microphone)"**.
 - Some applications cache the device list at startup — if it doesn't appear, restart the app after the stream is established.
+
+---
+
+For protocol details — packet format, capability negotiation, crypto interaction, and mixed-version
+behaviour — see [`docs/design/wire-format.md`](../design/wire-format.md).
