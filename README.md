@@ -24,6 +24,18 @@ This repo carries the design specification, build orchestration, release packagi
 
 Not yet released. Watch this repo for the v0.1.0 tag.
 
+## Building from source
+
+Clone the umbrella repo with all submodules in one step:
+
+```sh
+git clone --recurse-submodules https://github.com/JimothySnicket/moonlight-mic.git
+```
+
+This checks out `moonlight-common-c`, `moonlight-qt`, and `Apollo` each on their `moonlight-mic` branch, including Apollo's nested third-party dependencies.
+
+Detailed per-component build instructions will live in `docs/building/` once they are written (tracked in D3).
+
 ## License
 
 MIT for this umbrella repo (docs, scripts, CI). Component forks retain their upstream licenses (BSD for `moonlight-common-c`, GPLv3 for `moonlight-qt` and `Apollo`).
