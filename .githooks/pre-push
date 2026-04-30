@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# pre-push — tracked pre-push hook for the moonlight-mic umbrella.
+# Blocks a push to umbrella main if any submodule has unpushed commits on moonlight-mic.
+# Installed via: git config core.hooksPath .githooks  (done by scripts/setup.sh)
+
+set -euo pipefail
+
+UMBRELLA_ROOT="$(git rev-parse --show-toplevel)"
+GITMODULES="$UMBRELLA_ROOT/.gitmodules"
+
+if [ ! -f "$GITMODULES" ]; then
+    # Not a multi-module repo or no submodules; nothing to check.
+    exit 0
+fi
+
+# Extract submodule paths from .gitmodules
+# Matches lines like:  path = moonlight-common-c
+SUBMODULE_PATHS="$(grep '^\s*path\s*=' "$GITMODULES" | sed 's/.*=\s*//')"
+
+FAILED_SUBS=""
+
+for sub_path in $SUBMODULE_PATHS; do
+    full_path="$UMBRELLA_ROOT/$sub_path"
+    if [ ! -d "$full_path" ]; then
+        continue
+    fi
+
+    # Determine if the submodule is on moonlight-mic
+    current_branch="$(git -C "$full_path" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "DETACHED")"
+    if [ "$current_branch" != "moonlight-mic" ]; then
+        # Not on moonlight-mic; skip unpushed-commit check for this submodule
+        continue
+    fi
+
+    # Check for commits in HEAD that are not yet in the upstream tracking branch
+    # @{u} refers to the configured upstream (origin/moonlight-mic when tracking is set up)
+    upstream_ref="$(git -C "$full_path" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "")"
+    if [ -z "$upstream_ref" ]; then
+        # No upstream tracking branch configured; treat as unpushed (conservative).
+        FAILED_SUBS="$FAILED_SUBS $sub_path"
+        continue
+    fi
+
+    unpushed="$(git -C "$full_path" rev-list "${upstream_ref}..HEAD" --count 2>/dev/null || echo "0")"
+    if [ "$unpushed" -gt 0 ]; then
+        FAILED_SUBS="$FAILED_SUBS $sub_path"
+    fi
+done
+
+if [ -n "$FAILED_SUBS" ]; then
+    echo "ERROR: The following submodules have unpushed commits on moonlight-mic:"
+    for sub in $FAILED_SUBS; do
+        echo "  - $sub"
+    done
+    echo ""
+    echo "Push each submodule's moonlight-mic branch before pushing the umbrella."
+    echo "  Run: bash scripts/push-all.sh"
+    echo "  Or push each submodule manually, then retry."
+    exit 1
+fi
+
+exit 0
