@@ -16,10 +16,13 @@ if ! command -v gh > /dev/null 2>&1; then
     exit 1
 fi
 
-# Verify we are inside the umbrella git repo
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+# Find the umbrella repo root from the script's own location (scripts/ is one level below root).
+# This works whether setup.sh is run from the repo root or any other directory.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR/.." rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$REPO_ROOT" ]; then
-    echo "ERROR: Not inside a git repository. Run this script from inside the moonlight-mic umbrella repo."
+    echo "ERROR: Could not determine umbrella repo root from script location: $SCRIPT_DIR"
+    echo "       Ensure setup.sh lives in the scripts/ directory of the moonlight-mic umbrella repo."
     exit 1
 fi
 

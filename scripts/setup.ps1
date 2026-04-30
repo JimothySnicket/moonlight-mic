@@ -15,10 +15,11 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Verify we are inside the umbrella git repo
-$repoRoot = git rev-parse --show-toplevel 2>$null
+# Find the umbrella repo root from the script's own location (scripts/ is one level below root).
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$repoRoot = git -C "$ScriptDir/.." rev-parse --show-toplevel 2>$null
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($repoRoot)) {
-    Write-Error "ERROR: Not inside a git repository. Run this script from inside the moonlight-mic umbrella repo."
+    Write-Error "ERROR: Could not determine umbrella repo root from script location: $ScriptDir. Ensure setup.ps1 lives in scripts/ of the moonlight-mic umbrella repo."
     exit 1
 }
 
