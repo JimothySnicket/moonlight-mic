@@ -1,0 +1,430 @@
+---
+# Triggered by pushing a vX.Y.Z tag to the umbrella repo.
+# Builds Moonlight Qt (Windows + Linux + macOS) and Apollo (Windows),
+# then publishes a GitHub Release with all artifacts attached.
+#
+# NOTE: macOS build is marked continue-on-error — macOS runners are
+# notoriously flaky for Qt builds and are not blocking for a release.
+# Apollo Windows build uses --skip-package to avoid the web-UI npm
+# build step, which has a known download-reliability issue in CI.
+#
+# First release that fires this workflow: CM1 (tag v0.1.0).
+
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────────────
+  # 1. Submodule integrity check
+  #    Verifies that each submodule's pinned SHA is reachable from
+  #    the moonlight-mic branch HEAD on its fork — i.e., no orphan
+  #    commits that can't be re-fetched.
+  # ──────────────────────────────────────────────────────────────────
+  submodule-integrity:
+    name: Submodule integrity
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout umbrella with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Verify submodule SHAs are on moonlight-mic branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          FAILED=0
+          for sub in moonlight-common-c moonlight-qt Apollo; do
+            pinned=$(git -C "$sub" rev-parse HEAD)
+            echo "Checking $sub pinned=$pinned"
+
+            # Get the current moonlight-mic branch HEAD via gh API
+            branch_head=$(gh api \
+              "repos/JimothySnicket/${sub}/branches/moonlight-mic" \
+              --jq '.commit.sha')
+            echo "  $sub branch HEAD = $branch_head"
+
+            if [ "$pinned" = "$branch_head" ]; then
+              echo "  OK: pinned SHA matches branch HEAD exactly"
+              continue
+            fi
+
+            # Check if pinned is an ancestor of branch_head
+            status=$(gh api \
+              "repos/JimothySnicket/${sub}/compare/${pinned}...${branch_head}" \
+              --jq '.status' 2>/dev/null || echo "error")
+
+            # gh compare statuses: "identical", "ahead", "behind", "diverged"
+            # "ahead" means branch_head is ahead of pinned → pinned is ancestor → OK
+            if [ "$status" = "ahead" ] || [ "$status" = "identical" ]; then
+              echo "  OK: pinned SHA is an ancestor of $sub moonlight-mic branch (status=$status)"
+            else
+              echo "  FAIL: $sub pinned SHA $pinned is NOT reachable from moonlight-mic branch (compare status=$status)"
+              echo "        Umbrella submodule pointer is orphaned — push the submodule branch first."
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" = "1" ]; then
+            echo ""
+            echo "Integrity check failed. Fix: run scripts/push-all.sh to push all submodule branches"
+            echo "before pushing the umbrella tag."
+            exit 1
+          fi
+          echo "All submodule SHAs are reachable from their moonlight-mic branches."
+
+  # ──────────────────────────────────────────────────────────────────
+  # 2. Moonlight Qt — Windows
+  #    Builds x64 + arm64 bundles using MSVC + upstream build scripts.
+  # ──────────────────────────────────────────────────────────────────
+  build-moonlight-qt-windows:
+    name: Build Moonlight Qt (Windows)
+    needs: submodule-integrity
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout umbrella with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install Qt x64
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: false
+          add-tools-to-path: false
+          version: '6.11.0'
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e'
+
+      - name: Install Qt arm64 (cross-compile)
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: false
+          add-tools-to-path: false
+          arch: win64_msvc2022_arm64_cross_compiled
+          version: '6.11.0'
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e'
+
+      - name: Build x64 binaries
+        shell: cmd
+        working-directory: moonlight-qt
+        run: |
+          set "PATH=%QT_PATH%;%PATH%"
+          scripts\build-arch.bat Release x64
+        env:
+          QT_PATH: ${{ runner.workspace }}\Qt\6.11.0\msvc2022_64\bin
+
+      - name: Build arm64 binaries
+        shell: cmd
+        working-directory: moonlight-qt
+        run: |
+          set "PATH=%QT_PATH%;%PATH%"
+          scripts\build-arch.bat Release arm64
+        env:
+          QT_PATH: ${{ runner.workspace }}\Qt\6.11.0\msvc2022_arm64\bin
+
+      - name: Generate Windows bundle
+        shell: pwsh
+        working-directory: moonlight-qt
+        run: cmd /c scripts\generate-bundle.bat Release
+
+      - name: Upload Windows x64 artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: Moonlight-Windows-x64-${{ github.ref_name }}
+          path: moonlight-qt/build/deploy-x64-release/*
+          if-no-files-found: error
+
+      - name: Upload Windows arm64 artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: Moonlight-Windows-arm64-${{ github.ref_name }}
+          path: moonlight-qt/build/deploy-arm64-release/*
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────────────────────────
+  # 3. Moonlight Qt — Linux AppImage
+  #    Mirrors the per-fork build-appimage.yml approach.
+  # ──────────────────────────────────────────────────────────────────
+  build-moonlight-qt-linux:
+    name: Build Moonlight Qt (Linux AppImage)
+    needs: submodule-integrity
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout umbrella with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up build environment
+        run: |
+          wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.4.313-jammy.list \
+            https://packages.lunarg.com/vulkan/1.4.313/lunarg-vulkan-1.4.313-jammy.list
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            qt6-base-dev qt6-declarative-dev libqt6svg6-dev \
+            qml6-module-qtquick-controls qml6-module-qtquick-templates \
+            qml6-module-qtquick-layouts qml6-module-qtqml-workerscript \
+            qml6-module-qtquick-window qml6-module-qtquick \
+            python3-pip nasm libgbm-dev libdrm-dev libfreetype-dev \
+            libasound2-dev libdbus-1-dev libegl1-mesa-dev libgl1-mesa-dev \
+            libgles2-mesa-dev libglu1-mesa-dev libibus-1.0-dev libpulse-dev \
+            libudev-dev libx11-dev libxcursor-dev libxext-dev libxi-dev \
+            libxinerama-dev libxkbcommon-dev libxrandr-dev libxss-dev \
+            libxt-dev libxv-dev libxxf86vm-dev libxcb-dri3-dev \
+            libx11-xcb-dev libxfixes-dev libxtst-dev wayland-protocols \
+            libopus-dev libvdpau-dev libgl-dev libpipewire-0.3-dev \
+            liburing-dev vulkan-sdk cmake
+          sudo pip3 install meson
+          mkdir -p dep_root/{bin,include,lib}
+          echo "DEP_ROOT=$PWD/dep_root" >> "${GITHUB_ENV}"
+          echo "$PWD/dep_root/bin" >> "${GITHUB_PATH}"
+
+      - name: Checkout SDL3
+        uses: actions/checkout@v4
+        with:
+          repository: libsdl-org/SDL
+          ref: release-3.4.4
+          path: deps/SDL
+
+      - name: Build SDL3
+        working-directory: deps/SDL
+        run: |
+          cmake -DSDL_KMSDRM=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_INSTALL_DOCS=OFF -S . -B build
+          cmake --build build -j$(nproc)
+          sudo cmake --install build
+
+      - name: Checkout sdl2-compat
+        uses: actions/checkout@v4
+        with:
+          repository: libsdl-org/sdl2-compat
+          ref: release-2.32.66
+          path: deps/sdl2-compat
+
+      - name: Build sdl2-compat
+        working-directory: deps/sdl2-compat
+        run: |
+          cmake -DSDL2COMPAT_TESTS=OFF -S . -B build
+          cmake --build build -j$(nproc)
+          sudo cmake --install build
+
+      - name: Build Moonlight Qt AppImage
+        working-directory: moonlight-qt
+        run: |
+          bash scripts/build-appimage.sh Release
+
+      - name: Upload Linux AppImage artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: Moonlight-Linux-${{ github.ref_name }}
+          path: moonlight-qt/build/*.AppImage
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────────────────────────
+  # 4. Moonlight Qt — macOS (best-effort)
+  #    Known-fragile due to macOS runner reliability and Qt install
+  #    time. continue-on-error: true so a flaky runner does not block
+  #    a release. macOS Apollo is explicitly out of scope.
+  # ──────────────────────────────────────────────────────────────────
+  build-moonlight-qt-macos:
+    name: Build Moonlight Qt (macOS)
+    needs: submodule-integrity
+    runs-on: macos-15
+    continue-on-error: true
+
+    steps:
+      - name: Checkout umbrella with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install create-dmg
+        run: |
+          brew install node
+          npm install --global create-dmg
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: true
+          add-tools-to-path: true
+          version: '6.11.0'
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e'
+
+      - name: Build Moonlight Qt (macOS)
+        working-directory: moonlight-qt
+        run: bash scripts/generate-dmg.sh Release
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: Moonlight-macOS-${{ github.ref_name }}
+          path: moonlight-qt/build/installer-Release/*.dmg
+          compression-level: 0
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────────────────────────
+  # 5. Apollo — Windows
+  #    MSYS2 UCRT64 toolchain, cmake + ninja.
+  #    --skip-package avoids cpack + NSIS (not needed for a ZIP
+  #    release artifact). Web-UI is built by the cmake step via npm;
+  #    if npm download reliability causes failures, set
+  #    NPM_OFFLINE=ON and pre-cache packages (deferred until needed).
+  # ──────────────────────────────────────────────────────────────────
+  build-apollo-windows:
+    name: Build Apollo (Windows)
+    needs: submodule-integrity
+    runs-on: windows-2025
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout umbrella with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-boost
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-cppwinrt
+            mingw-w64-ucrt-x86_64-curl-winssl
+            mingw-w64-ucrt-x86_64-MinHook
+            mingw-w64-ucrt-x86_64-miniupnpc
+            mingw-w64-ucrt-x86_64-nodejs
+            mingw-w64-ucrt-x86_64-nsis
+            mingw-w64-ucrt-x86_64-onevpl
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-opus
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-nlohmann_json
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Configure Apollo with CMake
+        working-directory: Apollo
+        run: |
+          cmake -B build -G Ninja -S . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_DOCS=OFF \
+            -DBUILD_TESTS=OFF \
+            -DSUNSHINE_CONFIGURE_ONLY=OFF \
+            -DPUBLISHER_NAME='JimothySnicket' \
+            -DPUBLISHER_WEBSITE='https://github.com/JimothySnicket/Apollo' \
+            -DPUBLISHER_ISSUE_URL='https://github.com/JimothySnicket/Apollo/issues'
+
+      - name: Build Apollo
+        working-directory: Apollo
+        run: ninja -C build
+
+      - name: Package Apollo (ZIP)
+        working-directory: Apollo
+        run: cpack -G ZIP --config build/CPackConfig.cmake -B build/dist
+
+      - name: Upload Apollo Windows artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: Apollo-Windows-${{ github.ref_name }}
+          path: Apollo/build/dist/*.zip
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────────────────────────
+  # 6. Publish GitHub Release
+  #    Collects all artifacts and creates a release at the tag.
+  #    Release notes are pulled from the tag annotation if the tag
+  #    is annotated; a stub is used for lightweight tags.
+  # ──────────────────────────────────────────────────────────────────
+  publish-release:
+    name: Publish GitHub Release
+    needs:
+      - build-moonlight-qt-windows
+      - build-moonlight-qt-linux
+      - build-moonlight-qt-macos
+      - build-apollo-windows
+    # Run even if the optional macOS job failed (it has continue-on-error)
+    if: always() && needs.build-moonlight-qt-windows.result == 'success' && needs.build-moonlight-qt-linux.result == 'success' && needs.build-apollo-windows.result == 'success'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: false
+
+      - name: List collected artifacts
+        run: find release-artifacts -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/**/*
+          generate_release_notes: false
+          body: |
+            ## moonlight-mic ${{ github.ref_name }}
+
+            Mic passthrough for Moonlight Qt + Apollo — stream your microphone from
+            your Moonlight client to the host PC, where it appears as
+            **Microphone (Steam Streaming Microphone)**.
+
+            ### Downloads
+
+            | Artifact | Platform |
+            |----------|----------|
+            | `Moonlight-Windows-x64-*` | Moonlight Qt client — Windows x64 |
+            | `Moonlight-Windows-arm64-*` | Moonlight Qt client — Windows arm64 |
+            | `Moonlight-Linux-*` | Moonlight Qt client — Linux AppImage |
+            | `Moonlight-macOS-*` | Moonlight Qt client — macOS (if built) |
+            | `Apollo-Windows-*` | Apollo host — Windows |
+
+            ### Requirements
+
+            - Host: Windows 10+ with Steam audio drivers installed
+              (run Apollo's `install_steam_audio_drivers` once)
+            - Client: any platform Moonlight Qt runs on
+            - Both sides must be the patched version from this release
+
+            ### Known limitations
+
+            - Host audio routing (Linux/macOS host) not yet implemented
+            - Mic device selection not available — uses OS default mic
+            - Toggle is read at session start; mid-session changes take effect
+              at next connection
+
+            ### Setup
+
+            See [`docs/using/`](https://github.com/JimothySnicket/moonlight-mic/tree/main/docs/using)
+            for step-by-step setup instructions.
+
+            ---
+            *Binaries are unsigned. Windows and macOS may show security warnings on first launch.*
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
