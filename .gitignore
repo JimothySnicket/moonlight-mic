@@ -1,0 +1,30 @@
+# IDE / OS detritus
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+nul
+
+# Build artefacts.
+# Builders target <build-dir>\ for build output; the umbrella
+# source tree should never accumulate compiled output. These patterns
+# catch accidents (and were prompted by C4's 2026-05-01 spillover).
+/build/
+/build-*/
+/*-build/
+/*-tests-build/
+/test-minimal/
+/minimal-test/
+
+# Iteration logs at umbrella root.
+/*-err.txt
+/*-out.txt
+/*-output.txt
+/*.log
+
+# Iteration scratch scripts at umbrella root.
+# Tracked scripts live under /scripts/. The umbrella root should not
+# accumulate transient .bat/.ps1 helpers from build/test iterations.
+/*.bat
+/*.ps1
