@@ -28,6 +28,17 @@ echo "--- Updating Apollo submodules ---"
 git -C "$SOURCE_DIR" submodule update --init --recursive
 
 # ---------------------------------------------------------------------------
+# Optional debug flags (A1, 2026-05-03)
+#   Set DEBUG_MIC_AB_CAPTURE=1 in the environment to build with the debug
+#   mic A/B capture instrumentation enabled. See docs/development/mic-ab-capture.md.
+# ---------------------------------------------------------------------------
+EXTRA_CMAKE_FLAGS=()
+if [ -n "${DEBUG_MIC_AB_CAPTURE:-}" ]; then
+  EXTRA_CMAKE_FLAGS+=(-DDEBUG_MIC_AB_CAPTURE=ON)
+  echo "Debug feature ENABLED: DEBUG_MIC_AB_CAPTURE"
+fi
+
+# ---------------------------------------------------------------------------
 # CMake configure
 # ---------------------------------------------------------------------------
 echo "--- CMake configure ---"
@@ -42,7 +53,8 @@ cmake \
   -DBUILD_TESTS=OFF \
   -DBUILD_WERROR=OFF \
   -DSUNSHINE_ASSETS_DIR=assets \
-  -DSUNSHINE_ENABLE_TRAY=ON
+  -DSUNSHINE_ENABLE_TRAY=ON \
+  "${EXTRA_CMAKE_FLAGS[@]}"
 
 # ---------------------------------------------------------------------------
 # Build

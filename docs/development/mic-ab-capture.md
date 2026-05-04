@@ -67,66 +67,64 @@ without this code.
 
 ## Running a capture
 
-### One-time setup on the host (host-pc)
+### One-time setup — both ends point at a shared directory
 
-1. Pick or create an output directory. Anywhere your Apollo process can write —
-   e.g. `C:\debug\moonlight-mic-ab\`.
-2. Set the env var **before launching Apollo**:
+The recommended workflow uses a **shared filesystem path** that both the client
+and host can read/write — typically a network share such as JimothySnicket's `<your-drive>\` drive
+on client-pc (which is `\\HOST-PC\shared` on the network and `<your-drive>\` from
+host-pc itself). This lets a single hotkey press on the client trigger both
+captures because the client writes a `.arm` sentinel file that the host's
+polling loop sees within ~1 second.
 
-   ```cmd
-   set APOLLO_MIC_AB_CAPTURE_DIR=C:\debug\moonlight-mic-ab
-   sunshine.exe
-   ```
+Pick a shared directory (e.g. `<shared-dir>\moonlight-mic-ab\` on client-pc /
+`<shared-dir>\moonlight-mic-ab\` on host-pc — same physical files, different drive
+letters per machine). Then:
 
-   In a foreground console session this is fine. If Apollo runs as a service,
-   set the env var via the service's environment (Apollo's launch mechanism on
-   host-pc is documented in `scripts/run-apollo-host-pc.md`).
+**On the host (host-pc), set the env var system-wide and restart Apollo:**
 
-If `APOLLO_MIC_AB_CAPTURE_DIR` is not set, the host-side capture code is dormant
-even when the build was compiled with `DEBUG_MIC_AB_CAPTURE=ON`. The compiled
-code is in the binary but never observes a non-empty directory and never opens
-a file.
-
-### One-time setup on the client (client-pc)
-
-The client picks an output directory automatically — `SDL_GetPrefPath` returns
-something like
-`C:\Users\<user>\AppData\Roaming\moonlight-mic\ab-capture\` on Windows.
-
-To override it (e.g. so both files land on the same shared drive), set the env
-var before launching Moonlight:
-
-```cmd
-set MOONLIGHT_MIC_AB_CAPTURE_DIR=<shared-dir>\moonlight-mic-ab
-Moonlight.exe
+```powershell
+ssh <user>@host-pc 'setx APOLLO_MIC_AB_CAPTURE_DIR "<shared-dir>\moonlight-mic-ab" /M'
+ssh <user>@host-pc 'sc stop ApolloService'
+Start-Sleep -Seconds 8
+ssh <user>@host-pc 'sc start ApolloService'
 ```
+
+**On the client (client-pc), set the env var (user-level, no admin needed):**
+
+```powershell
+[Environment]::SetEnvironmentVariable("MOONLIGHT_MIC_AB_CAPTURE_DIR", "<shared-dir>\moonlight-mic-ab", "User")
+$env:MOONLIGHT_MIC_AB_CAPTURE_DIR = "<shared-dir>\moonlight-mic-ab"
+```
+
+If `APOLLO_MIC_AB_CAPTURE_DIR` is not set on the host, the host-side capture
+code is dormant even when the binary was compiled with `DEBUG_MIC_AB_CAPTURE=ON`.
+
+If `MOONLIGHT_MIC_AB_CAPTURE_DIR` is not set on the client, the client falls
+back to `SDL_GetPrefPath` (typically `%APPDATA%\moonlight-mic\ab-capture\`),
+and writes the `.arm` file there — which the host won't see, so you'd need
+to fall back to the manual two-trigger workflow described below.
 
 ### Per-capture (each time you want a measurement)
 
 1. **Start the stream** from the patched Moonlight client to the patched Apollo
    host with mic streaming enabled in Settings.
-2. **Arm the host** — on host-pc, create the trigger file:
+2. **Press Ctrl + Alt + Shift + R** in the streaming window. That single hotkey:
+   - Arms the client's worker thread to capture the next 10 s of pre-encode samples.
+   - Writes a `.arm` sentinel file to `MOONLIGHT_MIC_AB_CAPTURE_DIR`.
+   - Apollo's polling loop on the host (running once per second) sees the
+     `.arm` file in `APOLLO_MIC_AB_CAPTURE_DIR`, deletes it, and starts its own
+     10 s post-decode capture.
+3. **Speak into the mic for at least 10 seconds.** Both ends are writing.
 
-   ```cmd
-   type nul > C:\debug\moonlight-mic-ab\.arm
-   ```
-
-   Apollo polls for this file once per second (50 frames). On detection it
-   deletes the file, opens a new WAV, and starts capturing the next
-   10 seconds of post-decode mic samples.
-
-3. **Arm the client** — back in the streaming window, press **Ctrl + Alt + Shift + R**.
-   The client's mic worker thread captures the next 10 seconds of pre-encode
-   samples to its WAV file.
-4. **Speak into the mic for at least 10 seconds.** Both ends are now writing.
-
-The two captures don't need to start at exactly the same instant — they only
-need to overlap. Aim to do steps 2 and 3 within a few seconds of each other,
-then speak continuously. The A/B comparison only needs ~5-10 seconds of
-overlapping content.
+Realistic timing: the host's capture starts within ~1 second of the client's
+(host polls at 1 Hz; SMB write/read sync adds tens of milliseconds). Both
+captures are 10 s long, so 9+ seconds of overlapping content is normal — plenty
+for an A/B comparison.
 
 Apollo and Moonlight will log when capture starts and finishes:
 
+- Client: `MicAudioSender: debug capture ARMED ...`
+- Client: `MicAudioSender: wrote host trigger sentinel -> ...`
 - Client: `MicAudioSender: debug capture STARTED -> ...`
 - Client: `MicAudioSender: debug capture COMPLETE (480000 samples = 10 s)`
 - Host: `Mic A/B capture STARTED -> ...`
@@ -134,10 +132,25 @@ Apollo and Moonlight will log when capture starts and finishes:
 
 ### Re-arming for another capture
 
-- **Host**: just create the `.arm` file again. Each `.arm` arms exactly one
-  capture window; the host deletes the file as it starts.
-- **Client**: just press the hotkey again. A second press during a capture is a
-  no-op (logged as "already armed/in progress, ignoring trigger").
+Just press the hotkey again. The host's `.arm` file from the previous capture
+was deleted on detection, so a new one will be written. A second press during
+an in-progress capture is a no-op (logged as "already armed/in progress").
+There's no per-instance limit; capture as many windows as you need without
+restarting either process.
+
+### Manual fallback (no shared directory)
+
+If you can't or don't want to share a directory between the two machines, the
+hotkey still arms the client only. To trigger the host manually, create the
+`.arm` file on host-pc via SSH **immediately before** pressing the hotkey:
+
+```powershell
+ssh <user>@host-pc 'type nul > C:\path\to\apollo-mic-ab-capture\.arm'
+# then within ~1 second, alt-tab to Moonlight and press Ctrl+Alt+Shift+R
+```
+
+The captures don't need sample-precise sync — they just need to overlap.
+Aim to do both within ~5 seconds of each other.
 
 There's no per-Apollo-instance limit. Capture as many windows as you need
 without restarting either process.
