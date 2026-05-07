@@ -60,7 +60,7 @@ cmake \
 # Build
 # ---------------------------------------------------------------------------
 echo "--- ninja build ---"
-ninja -C "$BUILD_DIR" sunshine sunshinesvc audio-info dxgi-info
+ninja -C "$BUILD_DIR" sunshine sunshinesvc audio-info dxgi-info web-ui
 
 echo "=== Build complete ==="
 echo "Executable: $BUILD_DIR/sunshine.exe"

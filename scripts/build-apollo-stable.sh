@@ -33,7 +33,7 @@ cmake \
   -DSUNSHINE_ENABLE_TRAY=ON
 
 echo "--- ninja build ---"
-ninja -C "$BUILD_DIR" sunshine sunshinesvc audio-info dxgi-info
+ninja -C "$BUILD_DIR" sunshine sunshinesvc audio-info dxgi-info web-ui
 
 echo "--- Smoke test ---"
 pushd "$BUILD_DIR"
