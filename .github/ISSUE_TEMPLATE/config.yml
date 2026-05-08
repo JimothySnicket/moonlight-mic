@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Setup walkthrough
+    url: https://github.com/JimothySnicket/moonlight-mic/blob/main/docs/using/setup.md
+    about: End-to-end setup instructions for a new install.
+  - name: Troubleshooting guide
+    url: https://github.com/JimothySnicket/moonlight-mic/blob/main/docs/using/troubleshooting.md
+    about: Common issues and fixes — please check here first.
+  - name: Architecture overview
+    url: https://github.com/JimothySnicket/moonlight-mic/blob/main/ARCHITECTURE.md
+    about: Project shape, component forks, data flow.
