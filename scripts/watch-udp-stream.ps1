@@ -1,11 +1,13 @@
-# Watch UDP listeners during a stream attempt.
+# watch-udp-stream.ps1 — Watch UDP listeners during a stream attempt.
 # Runs for 90 seconds, samples every 2 seconds.
 # Outputs deltas — only new/disappeared listeners since last sample.
+#
+# No env vars — this script has no configurable parameters.
 
 $end = (Get-Date).AddSeconds(90)
 $prev = @{}
 
-Write-Output "[start $(Get-Date -Format 'HH:mm:ss.fff')] watching UDP listeners on shinybox"
+Write-Output "[start $(Get-Date -Format 'HH:mm:ss.fff')] watching UDP listeners on host"
 
 while ((Get-Date) -lt $end) {
     $current = @{}

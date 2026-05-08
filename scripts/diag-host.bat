@@ -3,8 +3,14 @@ REM Diagnostic for moonlight-mic on host-pc.
 REM Reports: sunshine.exe install locations, SunshineService config,
 REM Apollo build state, and currently-listening sunshine ports.
 REM No process introspection — only static state and listening sockets.
+REM
+REM Env vars respected:
+REM   MOONLIGHT_MIC_BUILD_ROOT  — build output root (default: C:\moonlight-mic-build)
 
 setlocal enabledelayedexpansion
+
+rem Build output dir. Override by setting MOONLIGHT_MIC_BUILD_ROOT in the environment.
+if not defined MOONLIGHT_MIC_BUILD_ROOT set MOONLIGHT_MIC_BUILD_ROOT=C:\moonlight-mic-build
 
 echo ===== HOSTNAME =====
 hostname
@@ -23,11 +29,11 @@ if exist "C:\Program Files\Apollo\sunshine.exe" (
 ) else (
     echo [MISSING] C:\Program Files\Apollo\sunshine.exe
 )
-if exist "<build-dir>\apollo-x64-release\sunshine.exe" (
-    echo [PRESENT] <build-dir>\apollo-x64-release\sunshine.exe (our patched dev build)
-    for %%F in ("<build-dir>\apollo-x64-release\sunshine.exe") do echo            size=%%~zF bytes  modified=%%~tF
+if exist "%MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\sunshine.exe" (
+    echo [PRESENT] %MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\sunshine.exe (our patched dev build)
+    for %%F in ("%MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\sunshine.exe") do echo            size=%%~zF bytes  modified=%%~tF
 ) else (
-    echo [MISSING] <build-dir>\apollo-x64-release\sunshine.exe
+    echo [MISSING] %MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\sunshine.exe
 )
 echo.
 
@@ -66,9 +72,9 @@ if exist "C:\Program Files\Apollo\config\sunshine.conf" (
     echo not present
 )
 echo --- our patched dev build config ---
-if exist "<build-dir>\apollo-x64-release\config\sunshine.conf" (
-    findstr /R "^sunshine_name" "<build-dir>\apollo-x64-release\config\sunshine.conf"
-    findstr /R "^port" "<build-dir>\apollo-x64-release\config\sunshine.conf"
+if exist "%MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\config\sunshine.conf" (
+    findstr /R "^sunshine_name" "%MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\config\sunshine.conf"
+    findstr /R "^port" "%MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\config\sunshine.conf"
 ) else (
     echo not present
 )
@@ -77,7 +83,7 @@ echo.
 echo ===== ALL sunshine.exe FOUND ON DISK =====
 where /R "C:\Program Files" sunshine.exe 2>NUL
 where /R "C:\Program Files (x86)" sunshine.exe 2>NUL
-where /R "<build-dir>" sunshine.exe 2>NUL
+where /R "%MOONLIGHT_MIC_BUILD_ROOT%" sunshine.exe 2>NUL
 echo.
 
 echo ===== END =====

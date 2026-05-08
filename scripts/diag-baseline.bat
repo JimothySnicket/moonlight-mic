@@ -8,16 +8,22 @@ REM Apollo config file contents, recording-device endpoints.
 REM
 REM Read-only (except temp files in %TEMP%). No service starts/stops, no admin
 REM mutations. Safe to run while production is live.
+REM
+REM Env vars respected:
+REM   MOONLIGHT_MIC_BUILD_ROOT  — build output root (default: C:\moonlight-mic-build)
 REM ============================================================================
 
 setlocal enabledelayedexpansion
+
+rem Build output dir. Override by setting MOONLIGHT_MIC_BUILD_ROOT in the environment.
+if not defined MOONLIGHT_MIC_BUILD_ROOT set MOONLIGHT_MIC_BUILD_ROOT=C:\moonlight-mic-build
 
 echo ===== HOSTNAME =====
 hostname
 echo.
 
 echo ===== SUNSHINE / APOLLO INSTALLS =====
-for %%P in ("C:\Program Files\Sunshine\sunshine.exe" "C:\Program Files\Apollo\sunshine.exe" "<build-dir>\apollo-x64-release\sunshine.exe") do (
+for %%P in ("C:\Program Files\Sunshine\sunshine.exe" "C:\Program Files\Apollo\sunshine.exe" "%MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release\sunshine.exe") do (
     if exist "%%~P" (
         echo [PRESENT] %%~P  size=%%~zP modified=%%~tP
     ) else (

@@ -12,11 +12,16 @@ REM   - Otherwise kills any sunshine.exe NOT in our build dir and launches the
 REM     dev build foreground. Service watchers (SunshineService / ApolloService)
 REM     will respawn their children later — that's fine, they'll fight us for
 REM     ports next time, and the active-stream check protects against yanking.
+REM
+REM Env vars respected:
+REM   MOONLIGHT_MIC_BUILD_ROOT  — build output root (default: C:\moonlight-mic-build)
 REM ============================================================================
 
 setlocal
 
-set "BUILD_DIR=<build-dir>\apollo-x64-release"
+rem Build output dir. Override by setting MOONLIGHT_MIC_BUILD_ROOT in the environment.
+if not defined MOONLIGHT_MIC_BUILD_ROOT set MOONLIGHT_MIC_BUILD_ROOT=C:\moonlight-mic-build
+set "BUILD_DIR=%MOONLIGHT_MIC_BUILD_ROOT%\apollo-x64-release"
 set "CONF=%BUILD_DIR%\config\sunshine.conf"
 
 if not exist "%BUILD_DIR%\sunshine.exe" (

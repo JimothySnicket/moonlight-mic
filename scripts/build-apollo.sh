@@ -6,16 +6,23 @@
 # Prerequisites (all already on host-pc from the T4 Sunshine build):
 #   pacman: mingw-w64-ucrt-x86_64-{cmake,ninja,gcc,pkg-config,boost,openssl,miniupnpc,opus,MinHook,nodejs}
 #
-# Output: <build-dir>\apollo-x64-release\sunshine.exe
-# Config: <build-dir>\apollo-x64-release\config\sunshine.conf  (created on first run)
+# Env vars respected:
+#   MOONLIGHT_MIC_BUILD_ROOT  — build output root (default: /c/moonlight-mic-build)
+#   DEBUG_MIC_AB_CAPTURE      — set non-empty to build with A/B capture instrumentation
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Paths — adjust SOURCE_DIR if the <your-drive> drive letter differs on your machine
+# Build output root (override via MOONLIGHT_MIC_BUILD_ROOT)
 # ---------------------------------------------------------------------------
-SOURCE_DIR="<repo-root>/moonlight-mic/Apollo"
-BUILD_DIR="<build-dir>/apollo-x64-release"
+: "${MOONLIGHT_MIC_BUILD_ROOT:=/c/moonlight-mic-build}"
+BUILD_DIR="$MOONLIGHT_MIC_BUILD_ROOT/apollo-x64-release"
+
+# ---------------------------------------------------------------------------
+# Source root auto-detected from script location
+# ---------------------------------------------------------------------------
+SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SOURCE_DIR="$SOURCE_ROOT/Apollo"
 
 echo "=== Apollo build ==="
 echo "Source : $SOURCE_DIR"
