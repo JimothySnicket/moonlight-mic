@@ -28,3 +28,8 @@ nul
 # accumulate transient .bat/.ps1 helpers from build/test iterations.
 /*.bat
 /*.ps1
+
+# Local one-off Apollo web UI target probes.
+# Canonical Apollo build scripts already build the web-ui target.
+/scripts/build-webui-v046.sh
+/scripts/find-web-target.sh
