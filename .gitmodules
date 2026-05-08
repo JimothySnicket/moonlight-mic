@@ -9,4 +9,4 @@
 [submodule "Apollo"]
 	path = Apollo
 	url = https://github.com/JimothySnicket/Apollo.git
-	branch = moonlight-mic
+	branch = moonlight-mic-v046

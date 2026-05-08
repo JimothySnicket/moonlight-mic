@@ -495,9 +495,6 @@ current behaviour (stop sending, host WASAPI buffer drains, silence) is correct 
 **Mic device selection.** Moonlight Qt uses SDL2's default recording device. A UI to pick the
 device is a natural future addition to the Audio Settings page.
 
-For the current project state (completed tasks, deferred work, and community phase plans) see
-`C:\Users\<user>\SecondBrain\projects\moonlight-mic.md`.
-
 ---
 
 *For user-facing setup instructions see [`docs/using/setup.md`](../using/setup.md).*
