@@ -4,7 +4,7 @@
 #
 # Env vars respected:
 #   MOONLIGHT_MIC_BUILD_ROOT  — build output root (default: /c/moonlight-mic-build)
-#   APOLLO_V046_SOURCE        — source worktree path (default: /g/moonlight-mic-v046-worktree)
+#   APOLLO_V046_SOURCE        — source worktree path (default: <repo-parent>/moonlight-mic-v046-worktree)
 
 set -euo pipefail
 
@@ -16,7 +16,7 @@ BUILD_DIR="$MOONLIGHT_MIC_BUILD_ROOT/apollo-v046-x64-release"
 
 # Source root auto-detected from script location; worktree default may differ
 SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: "${APOLLO_V046_SOURCE:=/g/moonlight-mic-v046-worktree}"
+: "${APOLLO_V046_SOURCE:=$(dirname "$SOURCE_ROOT")/moonlight-mic-v046-worktree}"
 SOURCE_DIR="$APOLLO_V046_SOURCE"
 
 echo "=== Apollo (v0.4.6) build ==="

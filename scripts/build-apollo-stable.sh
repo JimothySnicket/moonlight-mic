@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Build Apollo from the moonlight-mic-stable worktree on the host's local filesystem.
-# One-shot: submodule init + cmake + ninja. Run via:
-#   C:\msys64\usr\bin\bash.exe --login -c "bash /g/Dev/moonlight-mic/scripts/build-apollo-stable.sh"
+# One-shot: submodule init + cmake + ninja. Run from an MSYS2 UCRT64 shell with the repo as cwd:
+#   bash scripts/build-apollo-stable.sh
 #
 # Env vars respected:
 #   MOONLIGHT_MIC_BUILD_ROOT  — build output root (default: /c/moonlight-mic-build)
-#   APOLLO_STABLE_SOURCE      — source worktree path (default: /g/moonlight-mic-stable-worktree)
+#   APOLLO_STABLE_SOURCE      — source worktree path (default: <repo-parent>/moonlight-mic-stable-worktree)
 
 set -euo pipefail
 
@@ -17,7 +17,7 @@ BUILD_DIR="$MOONLIGHT_MIC_BUILD_ROOT/apollo-stable-x64-release"
 
 # Source root auto-detected from script location; worktree default may differ
 SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: "${APOLLO_STABLE_SOURCE:=/g/moonlight-mic-stable-worktree}"
+: "${APOLLO_STABLE_SOURCE:=$(dirname "$SOURCE_ROOT")/moonlight-mic-stable-worktree}"
 SOURCE_DIR="$APOLLO_STABLE_SOURCE"
 
 echo "=== Apollo (stable) build ==="

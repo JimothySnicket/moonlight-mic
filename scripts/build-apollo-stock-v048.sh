@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Build stock Apollo v0.4.8 (no mic patches) from the stock-v048 worktree.
 # Only the Boost 1.89.0 hash fix (37d30424) has been cherry-picked onto the worktree HEAD.
-# Run via:
-#   C:\msys64\usr\bin\bash.exe --login -c "bash /g/Dev/moonlight-mic/scripts/build-apollo-stock-v048.sh"
+# Run from an MSYS2 UCRT64 shell with the repo as cwd:
+#   bash scripts/build-apollo-stock-v048.sh
 #
 # Env vars respected:
 #   MOONLIGHT_MIC_BUILD_ROOT  — build output root (default: /c/moonlight-mic-build)
-#   APOLLO_STOCK_V048_SOURCE  — source worktree path (default: /g/moonlight-mic-stock-v048-worktree)
+#   APOLLO_STOCK_V048_SOURCE  — source worktree path (default: <repo-parent>/moonlight-mic-stock-v048-worktree)
 
 set -euo pipefail
 
@@ -18,7 +18,7 @@ BUILD_DIR="$MOONLIGHT_MIC_BUILD_ROOT/apollo-stock-v048-x64-release"
 
 # Source root auto-detected from script location; worktree default may differ
 SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: "${APOLLO_STOCK_V048_SOURCE:=/g/moonlight-mic-stock-v048-worktree}"
+: "${APOLLO_STOCK_V048_SOURCE:=$(dirname "$SOURCE_ROOT")/moonlight-mic-stock-v048-worktree}"
 SOURCE_DIR="$APOLLO_STOCK_V048_SOURCE"
 
 echo "=== Apollo (stock v0.4.8) build ==="
