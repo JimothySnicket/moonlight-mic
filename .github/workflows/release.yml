@@ -25,8 +25,8 @@ jobs:
   # ──────────────────────────────────────────────────────────────────
   # 1. Submodule integrity check
   #    Verifies that each submodule's pinned SHA is reachable from
-  #    the moonlight-mic branch HEAD on its fork — i.e., no orphan
-  #    commits that can't be re-fetched.
+  #    the branch named in .gitmodules for that submodule — i.e., no
+  #    orphan commits that can't be re-fetched.
   # ──────────────────────────────────────────────────────────────────
   submodule-integrity:
     name: Submodule integrity
@@ -38,7 +38,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Verify submodule SHAs are on moonlight-mic branch
+      - name: Verify submodule SHAs are on their tracked branches
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -47,13 +47,14 @@ jobs:
           FAILED=0
           for sub in moonlight-common-c moonlight-qt Apollo; do
             pinned=$(git -C "$sub" rev-parse HEAD)
-            echo "Checking $sub pinned=$pinned"
+            branch=$(git config --file .gitmodules --get "submodule.${sub}.branch")
+            echo "Checking $sub pinned=$pinned tracked-branch=$branch"
 
-            # Get the current moonlight-mic branch HEAD via gh API
+            # Get the current tracked-branch HEAD via gh API
             branch_head=$(gh api \
-              "repos/JimothySnicket/${sub}/branches/moonlight-mic" \
+              "repos/JimothySnicket/${sub}/branches/${branch}" \
               --jq '.commit.sha')
-            echo "  $sub branch HEAD = $branch_head"
+            echo "  $sub $branch HEAD = $branch_head"
 
             if [ "$pinned" = "$branch_head" ]; then
               echo "  OK: pinned SHA matches branch HEAD exactly"
@@ -68,9 +69,9 @@ jobs:
             # gh compare statuses: "identical", "ahead", "behind", "diverged"
             # "ahead" means branch_head is ahead of pinned → pinned is ancestor → OK
             if [ "$status" = "ahead" ] || [ "$status" = "identical" ]; then
-              echo "  OK: pinned SHA is an ancestor of $sub moonlight-mic branch (status=$status)"
+              echo "  OK: pinned SHA is an ancestor of $sub $branch branch (status=$status)"
             else
-              echo "  FAIL: $sub pinned SHA $pinned is NOT reachable from moonlight-mic branch (compare status=$status)"
+              echo "  FAIL: $sub pinned SHA $pinned is NOT reachable from $branch (compare status=$status)"
               echo "        Umbrella submodule pointer is orphaned — push the submodule branch first."
               FAILED=1
             fi
@@ -82,7 +83,7 @@ jobs:
             echo "before pushing the umbrella tag."
             exit 1
           fi
-          echo "All submodule SHAs are reachable from their moonlight-mic branches."
+          echo "All submodule SHAs are reachable from their tracked branches."
 
   # ──────────────────────────────────────────────────────────────────
   # 2. Moonlight Qt — Windows
