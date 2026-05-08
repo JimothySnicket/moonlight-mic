@@ -4,6 +4,8 @@ Microphone passthrough for the Sunshine + Moonlight game streaming stack — tal
 
 > **Status: in active development.** Not yet released. The proof-of-concept demonstrated end-to-end mic audio working through the [Apollo](https://github.com/ClassicOldSong/Apollo) host (a Sunshine fork) with a modified Moonlight Qt client. This umbrella project is the clean rewrite targeting public release.
 
+> **Built with [Claude Code](https://claude.com/claude-code) and Codex.** Most code was written by AI agents under maintainer direction; design, testing, and decisions were the maintainer's.
+
 ## What this is
 
 A modified Moonlight Qt client + a modified Apollo host that together let you stream microphone audio from the streaming client to the host PC. On the host, the audio shows up as **"Microphone (Steam Streaming Microphone)"** — capture it with Discord, OBS, or any voice chat app, and you'll be heard as if you were sitting at the host PC.
