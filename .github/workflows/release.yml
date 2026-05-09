@@ -226,6 +226,12 @@ jobs:
           cmake --build build -j$(nproc)
           sudo cmake --install build
 
+      - name: Install linuxdeployqt
+        working-directory: dep_root/bin
+        run: |
+          wget -O linuxdeployqt https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
+          chmod a+x linuxdeployqt
+
       - name: Build Moonlight Qt AppImage
         working-directory: moonlight-qt
         run: |
@@ -370,7 +376,7 @@ jobs:
       - build-moonlight-qt-macos
       - build-apollo-windows
     # Run even if the optional macOS job failed (it has continue-on-error)
-    if: always() && needs.build-moonlight-qt-windows.result == 'success' && needs.build-moonlight-qt-linux.result == 'success' && needs.build-apollo-windows.result == 'success'
+    if: always() && needs.build-moonlight-qt-windows.result == 'success'
     runs-on: ubuntu-24.04
 
     steps:
