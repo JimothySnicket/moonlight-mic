@@ -389,10 +389,22 @@ jobs:
       - name: List collected artifacts
         run: find release-artifacts -type f | sort
 
+      - name: Zip artifact directories
+        working-directory: release-artifacts
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for dir in */; do
+            name="${dir%/}"
+            (cd "$dir" && zip -r "../${name}.zip" .)
+          done
+          echo "Zips produced:"
+          ls -la *.zip
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-artifacts/**/*
+          files: release-artifacts/*.zip
           generate_release_notes: false
           body: |
             ## moonlight-mic ${{ github.ref_name }}
