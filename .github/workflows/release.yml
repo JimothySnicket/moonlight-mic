@@ -226,6 +226,83 @@ jobs:
           cmake --build build -j$(nproc)
           sudo cmake --install build
 
+      - name: Checkout SDL_ttf
+        uses: actions/checkout@v4
+        with:
+          repository: libsdl-org/SDL_ttf
+          ref: release-2.22.0
+          path: deps/SDL_ttf
+          submodules: 'recursive'
+
+      - name: Build SDL_ttf
+        working-directory: deps/SDL_ttf
+        run: |
+          ./autogen.sh
+          ./configure
+          make -j$(nproc)
+          sudo make install
+
+      - name: Checkout libva
+        uses: actions/checkout@v4
+        with:
+          repository: intel/libva
+          ref: 2.23.0
+          path: deps/libva
+
+      - name: Build libva
+        working-directory: deps/libva
+        run: |
+          ./autogen.sh
+          ./configure --enable-x11
+          make -j$(nproc)
+          sudo make install
+
+      - name: Checkout libplacebo
+        uses: actions/checkout@v4
+        with:
+          repository: haasn/libplacebo
+          ref: v7.360.1
+          path: deps/libplacebo
+          submodules: 'recursive'
+
+      - name: Build libplacebo
+        working-directory: deps/libplacebo
+        run: |
+          meson setup build -Dvulkan=enabled -Dopengl=disabled -Ddemos=false
+          ninja -C build
+          sudo ninja install -C build
+
+      - name: Build dav1d
+        working-directory: deps
+        env:
+          DAV1D_VER: 1.5.3
+        run: |
+          git clone --branch $DAV1D_VER --depth 1 https://code.videolan.org/videolan/dav1d.git
+          pushd dav1d
+          meson setup build -Ddefault_library=static -Dbuildtype=release -Denable_tools=false -Denable_tests=false
+          ninja -C build
+          sudo ninja install -C build
+          popd
+
+      - name: Checkout FFmpeg
+        uses: actions/checkout@v4
+        with:
+          repository: FFmpeg/FFmpeg
+          ref: n8.1
+          path: deps/FFmpeg
+
+      - name: Build FFmpeg
+        working-directory: deps/FFmpeg
+        run: |
+          ./configure --enable-pic --disable-static --enable-shared --disable-all --disable-autodetect --enable-avcodec --enable-avformat --enable-swscale \
+            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
+            --enable-vaapi --enable-hwaccel=h264_vaapi --enable-hwaccel=hevc_vaapi --enable-hwaccel=av1_vaapi \
+            --enable-vdpau --enable-hwaccel=h264_vdpau  --enable-hwaccel=hevc_vdpau --enable-hwaccel=av1_vdpau \
+            --enable-libdrm --enable-vulkan --enable-hwaccel=h264_vulkan --enable-hwaccel=hevc_vulkan --enable-hwaccel=av1_vulkan \
+            --enable-libdav1d --enable-decoder=libdav1d
+          make -j$(nproc)
+          sudo make install
+
       - name: Install linuxdeployqt
         working-directory: dep_root/bin
         run: |
