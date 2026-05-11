@@ -321,7 +321,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: Moonlight-Linux-${{ github.ref_name }}
-          path: moonlight-qt/build/*.AppImage
+          path: moonlight-qt/build/**/*.AppImage
           if-no-files-found: error
 
   # ──────────────────────────────────────────────────────────────────
