@@ -411,6 +411,10 @@ jobs:
         with:
           msystem: UCRT64
           update: true
+          # Inherit Windows runner PATH so the actions/setup-node Node
+          # installed in the previous step is visible to CMake's
+          # find_program(NPM npm) when run from inside this shell.
+          path-type: inherit
           install: >-
             git
             mingw-w64-ucrt-x86_64-boost
