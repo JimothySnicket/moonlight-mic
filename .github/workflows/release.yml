@@ -381,6 +381,12 @@ jobs:
     name: Build Apollo (Windows)
     needs: submodule-integrity
     runs-on: windows-2025
+    # Best-effort: the web-ui CMake target's npm/vite bundle step
+    # intermittently crashes with std::bad_weak_ptr / 0xc0000409 on
+    # GitHub Actions Windows runners (environmental flake, not source
+    # code). When that happens, the rest of the release still publishes;
+    # the Apollo Windows zip is built locally on shinybox as fallback.
+    continue-on-error: true
 
     defaults:
       run:
@@ -501,7 +507,7 @@ jobs:
             | `Moonlight-Windows-arm64-*` | Moonlight Qt client — Windows arm64 |
             | `Moonlight-Linux-*` | Moonlight Qt client — Linux AppImage |
             | `Moonlight-macOS-*` | Moonlight Qt client — macOS (if built) |
-            | `Apollo-Windows-*` | Apollo host — Windows |
+            | `Apollo-Windows-*` | Apollo host — Windows (included when CI build succeeds; manual upload from local build as fallback) |
 
             ### Requirements
 
