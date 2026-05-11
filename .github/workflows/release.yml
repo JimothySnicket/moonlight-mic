@@ -309,6 +309,9 @@ jobs:
           wget -O linuxdeployqt https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
           chmod a+x linuxdeployqt
 
+      - name: Refresh dynamic linker cache
+        run: sudo ldconfig
+
       - name: Build Moonlight Qt AppImage
         working-directory: moonlight-qt
         run: |
