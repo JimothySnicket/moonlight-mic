@@ -381,11 +381,13 @@ jobs:
     name: Build Apollo (Windows)
     needs: submodule-integrity
     runs-on: windows-2025
-    # Best-effort: the web-ui CMake target's npm/vite bundle step
-    # intermittently crashes with std::bad_weak_ptr / 0xc0000409 on
-    # GitHub Actions Windows runners (environmental flake, not source
-    # code). When that happens, the rest of the release still publishes;
-    # the Apollo Windows zip is built locally on shinybox as fallback.
+    # The web-ui CMake target's npm step previously crashed with
+    # std::bad_weak_ptr / 0xc0000409 from MSYS2's gcc-16-built nodejs
+    # (see apache/arrow#49958 — gcc 15.2 -> 16.1 libstdc++ regression).
+    # Fixed by installing official MSVC-built Node.js via
+    # actions/setup-node and removing mingw-w64-ucrt-x86_64-nodejs from
+    # the MSYS2 install list. continue-on-error retained as a safety
+    # net; manual shinybox upload remains the ultimate fallback.
     continue-on-error: true
 
     defaults:
@@ -398,6 +400,11 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 1
+
+      - name: Install official Node.js (bypasses MSYS2 gcc-16 nodejs)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Set up MSYS2 UCRT64
         uses: msys2/setup-msys2@v2
@@ -412,7 +419,6 @@ jobs:
             mingw-w64-ucrt-x86_64-curl-winssl
             mingw-w64-ucrt-x86_64-MinHook
             mingw-w64-ucrt-x86_64-miniupnpc
-            mingw-w64-ucrt-x86_64-nodejs
             mingw-w64-ucrt-x86_64-nsis
             mingw-w64-ucrt-x86_64-onevpl
             mingw-w64-ucrt-x86_64-openssl
