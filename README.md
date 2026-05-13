@@ -2,7 +2,7 @@
 
 Microphone passthrough for the Sunshine + Moonlight game streaming stack — talk into your mic on the Moonlight client, hear yourself on the Apollo host.
 
-> **Status: in active development.** Not yet released. The proof-of-concept demonstrated end-to-end mic audio working through the [Apollo](https://github.com/ClassicOldSong/Apollo) host (a Sunshine fork) with a modified Moonlight Qt client. This umbrella project is the clean rewrite targeting public release.
+> **Status: v0.1.0 release-candidate testing in progress.** The proof-of-concept demonstrated end-to-end mic audio working through the [Apollo](https://github.com/ClassicOldSong/Apollo) host (a Sunshine fork) with a modified Moonlight Qt client. This umbrella project is the clean rewrite; watch this repo for the v0.1.0 tag.
 
 > **Built with [Claude Code](https://claude.com/claude-code) and Codex.** Most code was written by AI agents under maintainer direction; design, testing, and decisions were the maintainer's.
 
@@ -50,7 +50,7 @@ For detailed steps, troubleshooting, and driver verification see [`docs/using/se
 
 ## Getting it
 
-Not yet released. Watch this repo for the v0.1.0 tag.
+Release candidates are available on the [Releases](https://github.com/JimothySnicket/moonlight-mic/releases) page; v0.1.0 tag pending. Watch this repo to be notified.
 
 ## License
 

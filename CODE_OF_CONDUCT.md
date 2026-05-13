@@ -8,7 +8,12 @@ This Code of Conduct applies within all project spaces — issues, pull requests
 
 ## Reporting
 
-Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported to the project maintainer at **jamie.e.donaldson@gmail.com**. All reports will be reviewed and investigated promptly and fairly. The maintainer is obligated to respect the privacy and security of any reporter.
+Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported privately to the project maintainer via one of:
+
+- GitHub's [private vulnerability reporting](https://github.com/JimothySnicket/moonlight-mic/security/advisories/new) flow on this repository (suitable for sensitive reports — set the report type to "Other" if it isn't a security issue).
+- A direct message to [@JimothySnicket](https://github.com/JimothySnicket) on GitHub.
+
+All reports will be reviewed and investigated promptly and fairly. The maintainer is obligated to respect the privacy and security of any reporter.
 
 ## Enforcement
 
