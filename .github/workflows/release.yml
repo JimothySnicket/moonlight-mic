@@ -517,7 +517,7 @@ jobs:
             | `Moonlight-Windows-arm64-*` | Moonlight Qt client — Windows arm64 |
             | `Moonlight-Linux-*` | Moonlight Qt client — Linux AppImage |
             | `Moonlight-macOS-*` | Moonlight Qt client — macOS (if built) |
-            | `Apollo-Windows-*` | Apollo host — Windows (included when CI build succeeds; manual upload from local build as fallback) |
+            | `Apollo-Windows-*` | Apollo host — Windows |
 
             ### Requirements
 
@@ -529,7 +529,6 @@ jobs:
             ### Known limitations
 
             - Host audio routing (Linux/macOS host) not yet implemented
-            - Mic device selection not available — uses OS default mic
             - Toggle is read at session start; mid-session changes take effect
               at next connection
 
