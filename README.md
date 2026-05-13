@@ -25,14 +25,14 @@ For deeper detail see [ARCHITECTURE.md](ARCHITECTURE.md) and the wire-format spe
 - **Host OS: Windows.** Linux and macOS host support is planned; the current release is Windows-only.
 - **Apollo on the host.** Not stock Sunshine — Apollo ships the Steam audio driver integration the receive path depends on. Apollo can run side-by-side with an existing Sunshine install on a different port; see [`docs/using/setup.md`](docs/using/setup.md).
 - **Steam audio drivers installed on the host.** Apollo's `tools/install_steam_audio_drivers` script handles this. Required for the "Microphone (Steam Streaming Microphone)" virtual device to appear.
-- **Patched Moonlight Qt client on the client machine.** Cross-platform: Windows, Linux, and macOS. Watch this repo for the v0.1.0 tag for downloadable binaries; for now, build from source — see [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Patched Moonlight Qt client on the client machine.** Cross-platform: Windows, Linux, and macOS. Download from the [Releases](https://github.com/JimothySnicket/moonlight-mic/releases) page, or build from source — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Both ends paired as normal.** Nothing changes in the Moonlight pairing flow.
 - **Both ends must be patched.** A stock client or stock host on either end means no mic forwarding; neither end errors or breaks.
 
 ## Quick start
 
 1. On the host: install Apollo and run `tools/install_steam_audio_drivers` from the Apollo install directory. See [Apollo's README](https://github.com/JimothySnicket/Apollo) for installation steps.
-2. On the client: install the patched Moonlight Qt build (watch this repo for the v0.1.0 tag; or build from source via [CONTRIBUTING.md](CONTRIBUTING.md)).
+2. On the client: install the patched Moonlight Qt build from the [Releases](https://github.com/JimothySnicket/moonlight-mic/releases) page (or build from source via [CONTRIBUTING.md](CONTRIBUTING.md)).
 3. Pair client and host as normal via Moonlight's standard Add PC flow — nothing changes here.
 4. On the client: open Settings → Audio → enable **"Stream client microphone to host"**. The setting persists across launches and defaults to off.
 5. Start a stream. On the host, open `mmsys.cpl` → Recording tab — **"Microphone (Steam Streaming Microphone)"** should appear as an active device. Speak into your client mic and the level meter should move.
